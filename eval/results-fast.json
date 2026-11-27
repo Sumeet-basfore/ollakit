@@ -1,0 +1,70 @@
+{
+  "model": "Qwen3.5-uncensored:latest",
+  "config": "fast",
+  "planted_total": 7,
+  "detected": 2,
+  "false_positives": 4,
+  "gate_stats": {
+    "candidates": 6,
+    "hallucination_dropped": 0,
+    "actionability_dropped": 0
+  },
+  "detail": [
+    {
+      "fixture": "buggy/handlers.py",
+      "planted": [
+        "exception-swallowing",
+        "shared-mutable-default"
+      ],
+      "found_lines": [],
+      "false_positives": 1,
+      "finding_count": 1
+    },
+    {
+      "fixture": "buggy/math.py",
+      "planted": [
+        "off-by-one",
+        "none-dereference"
+      ],
+      "found_lines": [
+        4
+      ],
+      "false_positives": 0,
+      "finding_count": 1
+    },
+    {
+      "fixture": "buggy/service.py",
+      "planted": [
+        "sql-injection",
+        "hardcoded-credential",
+        "resource-leak"
+      ],
+      "found_lines": [
+        6
+      ],
+      "false_positives": 0,
+      "finding_count": 1
+    },
+    {
+      "fixture": "clean/handlers.py",
+      "planted": [],
+      "found_lines": [],
+      "false_positives": 1,
+      "finding_count": 1
+    },
+    {
+      "fixture": "clean/math.py",
+      "planted": [],
+      "found_lines": [],
+      "false_positives": 1,
+      "finding_count": 1
+    },
+    {
+      "fixture": "clean/service.py",
+      "planted": [],
+      "found_lines": [],
+      "false_positives": 1,
+      "finding_count": 1
+    }
+  ]
+}
