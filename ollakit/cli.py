@@ -15,7 +15,7 @@ def main(argv: list[str] | None = None) -> int:
     p_review.add_argument("--staged", action="store_true", help="review staged changes (default)")
     p_review.add_argument("--branch", metavar="REF", help="review diff from REF to HEAD")
     p_review.add_argument("--model", help="chat model override")
-    p_review.add_argument("--json", action="store_true", help="emit raw JSON findings")
+    p_review.add_argument("--json", action="store_true", dest="as_json", help="emit raw JSON findings")
     p_review.add_argument("--install-hook", action="store_true", help="write a pre-push git hook")
 
     p_ask = sub.add_parser("ask", help="ask questions over an indexed notes directory")

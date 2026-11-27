@@ -29,24 +29,35 @@ def installed_models() -> list[str]:
 
 def pick_chat_model(explicit: str | None) -> str:
     if explicit:
+        cfg = config.load()
+        if cfg["chat_model"] != explicit:
+            cfg["chat_model"] = explicit
+            config.save(cfg)  # remember the operator's choice
         return explicit
     cfg = config.load()
     if cfg["chat_model"]:
         return cfg["chat_model"]
-    models = installed_models()
+    models = _models_with_size()
     if not models:
         raise SystemExit("No Ollama models installed. Try: ollama pull qwen3:4b")
-    # Prefer a coder model for review-style work, else the largest local model.
-    coder = [m for m in models if "coder" in m.lower() or "code" in m.lower()]
-    cloud = [m for m in models if ":cloud" in m]
-    local = [m for m in models if m not in cloud]
-    model = (coder or local or models)[0]
-    if coder and local:
-        model = coder[0]
+    local = [(name, size) for name, size in models if ":cloud" not in name]
+    if not local:
+        local = models
+    # Measured on this setup: qwen-family gives the fewest review false
+    # positives; prefer it, then the largest local model.
+    qwen = [(n, s) for n, s in local if n.lower().startswith("qwen")]
+    coder = [(n, s) for n, s in local if "coder" in n.lower() or "code" in n.lower()]
+    pool = coder or qwen or local
+    model = max(pool, key=lambda pair: pair[1])[0]
     cfg["chat_model"] = model
     config.save(cfg)
     print(f"[ollakit] selected chat model: {model} (set --model to override)")
     return model
+
+
+def _models_with_size() -> list[tuple[str, int]]:
+    client = get_client()
+    return [(m.model, m.size or 0) for m in client.list().models]
 
 
 def pick_embed_model(explicit: str | None) -> str:
