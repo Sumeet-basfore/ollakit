@@ -1,52 +1,43 @@
-"""ollakit CLI: review | ask | organize."""
+"""ollakit CLI: review | ask | organize.
 
-import argparse
+Each module owns its own argparse parser (build_args) so flags can't drift
+between the CLI and direct module calls.
+"""
+
 import sys
 
 from . import __version__
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="ollakit", description="Local Ollama toolkit")
-    parser.add_argument("--version", action="version", version=f"ollakit {__version__}")
-    sub = parser.add_subparsers(dest="command", required=True)
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] in ("-V", "--version"):
+        print(f"ollakit {__version__}")
+        return 0
+    if not argv or argv[0] in ("-h", "--help"):
+        print(
+            "usage: ollakit {review,ask,organize} ...\n"
+            "\n"
+            "  review    review a git diff with a local model\n"
+            "  ask       ask questions over an indexed notes directory\n"
+            "  organize  organize files in a directory (dry-run by default)\n"
+        )
+        return 0 if argv else 2
 
-    p_review = sub.add_parser("review", help="review a git diff with a local model")
-    p_review.add_argument("--staged", action="store_true", help="review staged changes (default)")
-    p_review.add_argument("--branch", metavar="REF", help="review diff from REF to HEAD")
-    p_review.add_argument("--model", help="chat model override")
-    p_review.add_argument("--json", action="store_true", dest="as_json", help="emit raw JSON findings")
-    p_review.add_argument("--install-hook", action="store_true", help="write a pre-push git hook")
-
-    p_ask = sub.add_parser("ask", help="ask questions over an indexed notes directory")
-    p_ask.add_argument("question", nargs="?", help="question to answer")
-    p_ask.add_argument("--index", metavar="DIR", help="directory to index (default from config)")
-    p_ask.add_argument("--reindex", action="store_true", help="rebuild the index")
-    p_ask.add_argument("--chat", action="store_true", help="interactive session")
-    p_ask.add_argument("--model", help="chat model override")
-    p_ask.add_argument("--embed-model", help="embedding model override")
-
-    p_org = sub.add_parser("organize", help="organize files in a directory (dry-run by default)")
-    p_org.add_argument("directory", help="directory to organize")
-    p_org.add_argument("--recursive", action="store_true", help="recurse into subdirectories")
-    p_org.add_argument("--apply", action="store_true", help="execute the plan (default is dry-run)")
-    p_org.add_argument("--undo", action="store_true", help="revert the last organize apply")
-    p_org.add_argument("--model", help="chat model override")
-
-    args = parser.parse_args(argv)
-
-    if args.command == "review":
+    command, rest = argv[0], argv[1:]
+    if command == "review":
         from . import review
 
-        return review.run(args)
-    if args.command == "ask":
+        return review.run(review.build_args(rest))
+    if command == "ask":
         from . import ask
 
-        return ask.run(args)
-    if args.command == "organize":
+        return ask.run(ask.build_args(rest))
+    if command == "organize":
         from . import organize
 
-        return organize.run(args)
+        return organize.run(organize.build_args(rest))
+    print(f"unknown command: {command}", file=sys.stderr)
     return 2
 
 
