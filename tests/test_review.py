@@ -52,7 +52,7 @@ def test_render_findings_groups_by_file(capsys):
     out = capsys.readouterr().out
     assert "a.py:1" in out
     assert "a.py:5" in out
-    assert "critical" in out
+    assert "CRITICAL" in out
 
 
 def test_run_exits_zero_on_clean_diff(tmp_path, monkeypatch):
@@ -64,30 +64,32 @@ def test_run_exits_zero_on_clean_diff(tmp_path, monkeypatch):
 
 
 def test_run_exit_code_reflects_critical(monkeypatch):
-    fake = [{"file": "a.py", "line": 1, "severity": "critical", "comment": "boom"}]
+    fake = [{"file": "a.py", "line": 1, "severity": "critical", "comment": "boom",
+             "suggested_patch": None, "failure_mode": None, "category": "correctness"}]
     monkeypatch.setattr(review, "get_diff", lambda args: "diff --git a/a.py b/a.py\n+x=1")
     monkeypatch.setattr(review, "collect_findings", lambda diff, model: fake)
-    assert review.run(review.build_args([])) == 1
+    assert review.run(review.build_args(["--fast"])) == 1
 
     monkeypatch.setattr(review, "collect_findings", lambda diff, model: [])
-    assert review.run(review.build_args([])) == 0
+    assert review.run(review.build_args(["--fast"])) == 0
+
+
+def _full_finding(comment="c"):
+    return {"file": "a.py", "line": 1, "severity": "critical", "comment": comment,
+            "suggested_patch": None, "failure_mode": None, "category": "quality"}
 
 
 def test_model_findings_parsed_and_validated():
     raw = '[{"file": "a.py", "line": 1, "severity": "critical", "comment": "c"}]'
-    assert review.to_findings(raw) == [
-        {"file": "a.py", "line": 1, "severity": "critical", "comment": "c"}
-    ]
+    assert review.to_findings(raw) == [_full_finding()]
     # a bare object (no array) is accepted; severity synonyms map onto the enum
     raw2 = '{"file": "a.py", "severity": "high", "comment": "secret key"}'
-    assert review.to_findings(raw2) == [
-        {"file": "a.py", "line": None, "severity": "critical", "comment": "secret key"}
-    ]
+    expected2 = _full_finding("secret key") | {"line": None}
+    assert review.to_findings(raw2) == [expected2]
     # garbage severity is coerced to nit, non-dict rows dropped
     raw3 = '[{"file": "a.py", "severity": "banana", "comment": "x"}, "junk"]'
-    assert review.to_findings(raw3) == [
-        {"file": "a.py", "line": None, "severity": "nit", "comment": "x"}
-    ]
+    expected3 = _full_finding("x") | {"line": None, "severity": "nit"}
+    assert review.to_findings(raw3) == [expected3]
 
 
 def test_install_hook_bakes_absolute_path(tmp_path, monkeypatch):
