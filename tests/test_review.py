@@ -88,3 +88,17 @@ def test_model_findings_parsed_and_validated():
     assert review.to_findings(raw3) == [
         {"file": "a.py", "line": None, "severity": "nit", "comment": "x"}
     ]
+
+
+def test_install_hook_bakes_absolute_path(tmp_path, monkeypatch):
+    import shutil as sh
+    from pathlib import Path as P
+
+    repo = tmp_path
+    (repo / ".git" / "hooks").mkdir(parents=True)
+    monkeypatch.chdir(repo)
+    monkeypatch.setattr(sh, "which", lambda name: "/venv/bin/ollakit")
+    review.install_hook()
+    hook = (repo / ".git" / "hooks" / "pre-commit").read_text()
+    assert '"/venv/bin/ollakit"' in hook
+    assert sh.which("ollakit") == "/venv/bin/ollakit"  # sanity on the stub

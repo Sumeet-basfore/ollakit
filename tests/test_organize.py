@@ -102,3 +102,15 @@ def test_collision_gets_suffix(messy, monkeypatch, capsys):
     organize.undo(journal)  # undo must restore through the suffix rename
     assert (messy / "report.pdf").exists()
     assert (messy / "Documents" / "report.pdf").read_text() == "existing"
+
+
+def test_apply_rechecks_dst_appeared_after_plan(messy, monkeypatch, capsys):
+    monkeypatch.setattr(organize, "classify", fake_model({"report.pdf": ("Documents", None)}))
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+    moves = organize.plan_for(messy, "m")
+    # a file appears in the destination after the plan was shown
+    (messy / "Documents").mkdir(exist_ok=True)
+    (messy / "Documents" / "report.pdf").write_text("appeared")
+    organize.apply(moves)
+    assert (messy / "Documents" / "report.pdf").read_text() == "appeared"
+    assert (messy / "Documents" / "report (2).pdf").exists()

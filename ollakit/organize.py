@@ -180,6 +180,10 @@ def apply(moves: list) -> Path:
     jp = journal_path()
     journal = []
     for m in moves:
+        # dst uniqueness was checked at plan time; re-check in case the
+        # directory changed between the plan and the confirmation.
+        if m.dst.exists():
+            m.dst = unique_dst(m.dst)
         m.dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(m.src), str(m.dst))  # preserves mtime
         journal.append({"src": str(m.src), "dst": str(m.dst)})

@@ -125,25 +125,29 @@ def render(findings: list[dict]) -> None:
     )
 
 
-HOOK = """#!/bin/sh
+HOOK_TEMPLATE = """#!/bin/sh
 # Installed by `ollakit review --install-hook`; blocks commits with critical findings.
-ollakit review --staged || {
+"{ollakit_bin}" review --staged || {{
   echo ""
   echo "pre-commit: ollakit found critical issues. Fix them or commit with --no-verify."
   exit 1
-}
+}}
 """
 
 
 def install_hook() -> None:
     import os
+    import shutil as _shutil
     from pathlib import Path
 
+    ollakit_bin = _shutil.which("ollakit") or sys.argv[0]
+    if not os.path.isabs(ollakit_bin):
+        raise SystemExit("Cannot resolve the ollakit executable path; run from an install.")
     hook = Path(".git") / "hooks" / "pre-commit"
     if hook.exists():
         raise SystemExit(f"{hook} already exists; refusing to overwrite. Remove it first.")
     hook.parent.mkdir(parents=True, exist_ok=True)
-    hook.write_text(HOOK)
+    hook.write_text(HOOK_TEMPLATE.format(ollakit_bin=ollakit_bin))
     hook.chmod(hook.stat().st_mode | 0o111)
     print(f"Installed pre-commit hook at {hook}. Undo: rm {hook}")
 
