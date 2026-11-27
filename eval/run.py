@@ -31,7 +31,7 @@ def staged_diff(directory: Path, filename: str) -> str:
     return result.stdout
 
 
-def review_diff(diff_text: str, workdir: Path, fast: bool, model: str) -> tuple[list[dict], dict]:
+def review_diff(diff_text: str, workdir: Path, fast: bool, model: str, security_model: str | None = None) -> tuple[list[dict], dict]:
     files = parse_diff(diff_text)
     linter_findings, _ = linters.run_all([f.path for f in files if f.path != "?"])
     if fast:
@@ -49,15 +49,16 @@ def review_diff(diff_text: str, workdir: Path, fast: bool, model: str) -> tuple[
                 continue
             ctx = context.enrich(workdir / fd.path, spans[0][0], spans[-1][1])
             file_data.append((fd.path, ctx, hunk_text, None))
-        candidates = generate.generate_for_files(file_data, model)
+        candidates = generate.generate_for_files(file_data, model, security_model)
         surfaced, stats = gates.apply_gates(candidates, workdir)
     return linter_findings + surfaced, stats
 
 
-def evaluate(fast: bool, model: str) -> dict:
+def evaluate(fast: bool, model: str, security_model: str | None = None) -> dict:
     manifest = json.loads((FIXTURES / "manifest.json").read_text())
     results = {
         "model": model,
+        "security_model": security_model or model,
         "config": "fast" if fast else "gated",
         "planted_total": 0,
         "detected": 0,
@@ -77,7 +78,7 @@ def evaluate(fast: bool, model: str) -> dict:
                 subprocess.run(["git", "-C", str(repo), "add", fixture.name], check=True)
                 diff_text = staged_diff(repo, fixture.name)
                 # review inside the with-block: the judge reads file content
-                surfaced, stats = review_diff(diff_text, repo, fast, model)
+                surfaced, stats = review_diff(diff_text, repo, fast, model, security_model)
             results["gate_stats"]["candidates"] += stats.get("candidates", len(surfaced))
             results["gate_stats"]["hallucination_dropped"] += stats.get("hallucination_dropped", 0)
             results["gate_stats"]["actionability_dropped"] += stats.get("actionability_dropped", 0)
@@ -114,9 +115,10 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--fast", action="store_true")
     parser.add_argument("--model")
+    parser.add_argument("--security-model")
     args = parser.parse_args()
     model = client.pick_chat_model(args.model)
-    r = evaluate(args.fast, model)
+    r = evaluate(args.fast, model, args.security_model)
     det = f"{r['detected']}/{r['planted_total']}"
     print(f"\n=== ollakit review eval [{r['config']}] model={r['model']} ===")
     print(f"detection:      {det}")

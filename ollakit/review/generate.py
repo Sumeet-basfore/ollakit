@@ -89,20 +89,25 @@ def build_user_prompt(
     return "\n\n".join(parts)
 
 
-def generate_for_files(file_data: list[tuple], model: str) -> list[dict]:
+def generate_for_files(
+    file_data: list[tuple], model: str, security_model: str | None = None
+) -> list[dict]:
     """file_data: (path, context_text, hunk_text, linter_note) tuples.
 
     Two lens passes per file: the general reviewer, then a security-only
     scan. Small local models attend better to one concern at a time, and
-    the security lens reliably catches credentials the general pass
-    skips. Duplicates are harmless — the gates dedupe by file+line.
+    different models catch different bugs — so the security lens can run
+    on its own model (config `security_model`). Duplicates are harmless:
+    the gates dedupe by file+line.
     """
+    security_model = security_model or model
     findings: list[dict] = []
     for path, context_text, hunk_text, linter_note in file_data:
         user_prompt = build_user_prompt(path, context_text, hunk_text, linter_note)
-        for system_prompt in (SYSTEM_PROMPT, SECURITY_PROMPT):
+        passes = ((SYSTEM_PROMPT, model), (SECURITY_PROMPT, security_model))
+        for system_prompt, pass_model in passes:
             raw = client.chat(
-                model,
+                pass_model,
                 [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},

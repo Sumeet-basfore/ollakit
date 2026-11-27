@@ -1,12 +1,13 @@
 {
   "model": "Qwen3.5-uncensored:latest",
+  "security_model": "gemma4:e2b",
   "config": "gated",
   "planted_total": 7,
   "detected": 3,
   "false_positives": 2,
   "gate_stats": {
-    "candidates": 7,
-    "hallucination_dropped": 0,
+    "candidates": 9,
+    "hallucination_dropped": 1,
     "actionability_dropped": 0
   },
   "detail": [
@@ -42,7 +43,7 @@
         "resource-leak"
       ],
       "found_lines": [
-        6
+        10
       ],
       "false_positives": 0,
       "finding_count": 1

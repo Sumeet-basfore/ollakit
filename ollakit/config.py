@@ -9,6 +9,7 @@ _DEFAULTS = {
     "chat_model": None,   # picked on first run from installed models
     "embed_model": None,  # picked on first run; prompts for pull if absent
     "notes_dir": None,    # default --index dir for `ollakit ask`
+    "security_model": None,  # review: model for the security lens (None = chat_model)
 }
 
 _CACHE_DIR = Path.home() / ".cache" / "ollakit"

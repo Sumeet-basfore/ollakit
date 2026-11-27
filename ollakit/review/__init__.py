@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from .. import client
+from ..config import load as load_config
 from . import context, gates, generate, handoff, linters
 from .diff import get_diff, parse_diff, split_diff  # noqa: F401 (re-exported)
 
@@ -33,6 +34,9 @@ def build_args(argv: list[str]):
     parser.add_argument("--staged", action="store_true")
     parser.add_argument("--branch", metavar="REF")
     parser.add_argument("--model")
+    parser.add_argument(
+        "--security-model", dest="security_model", help="model for the security lens pass"
+    )
     parser.add_argument("--json", action="store_true", dest="as_json")
     parser.add_argument("--install-hook", action="store_true", dest="install_hook")
     parser.add_argument("--fast", action="store_true", help="single-pass raw-diff review (v1)")
@@ -57,7 +61,7 @@ def _collect_changed_paths(files) -> list[str]:
     return [f.path for f in files if f.path != "?" and not f.path.startswith("/dev/")]
 
 
-def _gather_model_findings(files, model: str, linter_findings: list[dict]) -> list[dict]:
+def _gather_model_findings(files, model: str, linter_findings: list[dict], security_model: str | None = None) -> list[dict]:
     file_data = []
     for fd in files:
         hunk_text = "\n".join(
@@ -70,7 +74,7 @@ def _gather_model_findings(files, model: str, linter_findings: list[dict]) -> li
         ctx = context.enrich(Path(fd.path), first[0], first[-1])
         own = "\n".join(f"{f['comment']}" for f in linter_findings if f["file"] == fd.path) or None
         file_data.append((fd.path, ctx, hunk_text, own))
-    return generate.generate_for_files(file_data, model)
+    return generate.generate_for_files(file_data, model, security_model)
 
 
 def install_hook() -> None:
@@ -130,7 +134,8 @@ def run(args) -> int:
         stats: dict = {"candidates": len(surfaced), "hallucination_dropped": 0,
                        "actionability_dropped": 0, "capped": 0, "hallucination_reasons": []}
     else:
-        candidates = _gather_model_findings(files, model, linter_findings)
+        security_model = args.security_model or load_config()["security_model"]
+        candidates = _gather_model_findings(files, model, linter_findings, security_model)
         if args.no_gates:
             surfaced = candidates
             stats = {"candidates": len(candidates), "hallucination_dropped": 0,
