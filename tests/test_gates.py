@@ -74,11 +74,11 @@ def test_judge_unparseable_defaults_to_drop(monkeypatch):
 def test_apply_gates_runs_judge_and_counts(monkeypatch, tmp_path):
     (tmp_path / "db.py").write_text(FILE_CONTENT)
     monkeypatch.setattr(
-        gates, "fact_check", lambda f, content: (f["comment"] != "vague one", "ok")
+        gates, "fact_check", lambda f, content: (f["comment"] != "SQL injection via string formatting", "ok")
     )
     candidates = [
         _finding(),
-        _finding(comment="vague one", suggested_patch=None),
+        _finding(comment="consider refactoring this", suggested_patch=None),
     ]
     kept, stats = gates.apply_gates(candidates, root=tmp_path)
     assert len(kept) == 1
