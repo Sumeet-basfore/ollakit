@@ -62,6 +62,18 @@ def to_findings(raw: str) -> list[dict]:
     return findings
 
 
+SECURITY_PROMPT = (
+    "You are a security auditor. Scan the added (+) lines for ONLY security issues: "
+    "hardcoded credentials (API keys, tokens, passwords, private keys), injection "
+    "(SQL, command, path), unsafe deserialization, weak crypto, missing input "
+    "validation on external input. Output ONLY a JSON array with the same finding "
+    "schema as before "
+    '{"file": str, "line": int, "severity": "critical"|"warn"|"nit", "comment": str, '
+    '"suggested_patch": str|null, "failure_mode": str|null, "category": "security"}. '
+    'If there are no security issues, return []. No prose.'
+)
+
+
 def build_user_prompt(
     path: str, context_text: str, hunk_text: str, linter_note: str | None
 ) -> str:
@@ -78,20 +90,28 @@ def build_user_prompt(
 
 
 def generate_for_files(file_data: list[tuple], model: str) -> list[dict]:
-    """file_data: (path, context_text, hunk_text, linter_note) tuples."""
+    """file_data: (path, context_text, hunk_text, linter_note) tuples.
+
+    Two lens passes per file: the general reviewer, then a security-only
+    scan. Small local models attend better to one concern at a time, and
+    the security lens reliably catches credentials the general pass
+    skips. Duplicates are harmless — the gates dedupe by file+line.
+    """
     findings: list[dict] = []
     for path, context_text, hunk_text, linter_note in file_data:
-        raw = client.chat(
-            model,
-            [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": build_user_prompt(path, context_text, hunk_text, linter_note)},
-            ],
-            json_mode=True,
-        )
-        for f in to_findings(raw):
-            f.setdefault("file", path)
-            findings.append(f)
+        user_prompt = build_user_prompt(path, context_text, hunk_text, linter_note)
+        for system_prompt in (SYSTEM_PROMPT, SECURITY_PROMPT):
+            raw = client.chat(
+                model,
+                [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                json_mode=True,
+            )
+            for f in to_findings(raw):
+                f.setdefault("file", path)
+                findings.append(f)
     return findings
 
 

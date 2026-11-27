@@ -74,6 +74,22 @@ def rank(findings: list[dict]) -> list[dict]:
     )
 
 
+def dedupe(findings: list[dict]) -> list[dict]:
+    """Collapse cross-lens duplicates: same file, lines within ±2."""
+    kept: list[dict] = []
+    for f in rank(findings):
+        near = any(
+            k["file"] == f["file"]
+            and f.get("line") is not None
+            and k.get("line") is not None
+            and abs(k["line"] - f["line"]) <= 2
+            for k in kept
+        )
+        if not near:
+            kept.append(f)
+    return kept
+
+
 def apply_gates(
     candidates: list[dict], root, cap: int = 5, judge_model: str | None = None
 ) -> tuple[list[dict], dict]:
@@ -104,7 +120,7 @@ def apply_gates(
                 )
                 continue
         kept.append(f)
-    kept = rank(kept)
+    kept = dedupe(kept)
     if len(kept) > cap:
         stats["capped"] = len(kept) - cap
         kept = kept[:cap]
