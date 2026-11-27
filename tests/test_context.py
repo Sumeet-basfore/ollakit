@@ -1,3 +1,4 @@
+import tempfile
 """Tests for diff parsing and context enrichment."""
 
 from ollakit.review import context, diff
@@ -83,3 +84,12 @@ def test_context_missing_file_returns_empty():
     from pathlib import Path
 
     assert context.enrich(Path("/nonexistent/file.py"), 1, 2) == ""
+
+
+def test_enrich_clamps_huge_end():
+    import pathlib
+
+    f = pathlib.Path(tempfile.mkdtemp()) / "a.py"
+    f.write_text("def a():\n    return 1\n")
+    ctx = context.enrich(f, 1, 10**9)  # whole-file call must not explode
+    assert "def a" in ctx and len(ctx) < 10_000

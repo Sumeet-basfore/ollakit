@@ -59,6 +59,8 @@ def enrich(path: Path, new_start: int, new_end: int) -> str:
     lines = text.splitlines()
     if not lines:
         return ""
+    new_start = max(1, new_start)
+    new_end = min(new_end, len(lines))  # clamp "whole file" calls
     if path.suffix == ".py":
         start, end = _python_enclosing(lines, new_start)
     else:
