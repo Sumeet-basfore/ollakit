@@ -5,8 +5,8 @@
   "detected": 3,
   "false_positives": 2,
   "gate_stats": {
-    "candidates": 6,
-    "hallucination_dropped": 1,
+    "candidates": 7,
+    "hallucination_dropped": 0,
     "actionability_dropped": 0
   },
   "detail": [
@@ -51,15 +51,15 @@
       "fixture": "clean/handlers.py",
       "planted": [],
       "found_lines": [],
-      "false_positives": 0,
-      "finding_count": 0
+      "false_positives": 1,
+      "finding_count": 1
     },
     {
       "fixture": "clean/math.py",
       "planted": [],
       "found_lines": [],
-      "false_positives": 1,
-      "finding_count": 1
+      "false_positives": 0,
+      "finding_count": 0
     },
     {
       "fixture": "clean/service.py",

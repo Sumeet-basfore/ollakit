@@ -88,7 +88,7 @@ def test_apply_gates_caps_and_ranks(monkeypatch, tmp_path):
     (tmp_path / "db.py").write_text(FILE_CONTENT)
     monkeypatch.setattr(gates, "fact_check", lambda f, c: (True, "ok"))
     candidates = [
-        _finding(severity="nit", category="quality", line=6, comment=f"nit {i}")
+        _finding(severity="nit", category="quality", line=10 * (i + 1), comment=f"nit {i}")
         for i in range(4)
     ] + [_finding(category="security", comment="the real bug")]
     kept, stats = gates.apply_gates(candidates, root=tmp_path, cap=5)
@@ -101,10 +101,21 @@ def test_apply_gates_caps_and_ranks(monkeypatch, tmp_path):
 def test_apply_gates_suppresses_below_cap(monkeypatch, tmp_path):
     (tmp_path / "db.py").write_text(FILE_CONTENT)
     monkeypatch.setattr(gates, "fact_check", lambda f, c: (True, "ok"))
-    candidates = [_finding(comment=f"f{i}", line=i + 1) for i in range(8)]
+    candidates = [_finding(comment=f"f{i}", line=10 * (i + 1)) for i in range(8)]
     kept, stats = gates.apply_gates(candidates, root=tmp_path, cap=5)
     assert len(kept) == 5
     assert stats["capped"] == 3
+
+
+def test_dedupe_collapses_cross_lens_duplicates():
+    dupes = [
+        _finding(comment="general pass", category="quality", line=6),
+        _finding(comment="security pass", category="security", line=7),
+        _finding(comment="far away", line=50),
+    ]
+    kept = gates.dedupe(dupes)
+    # higher-ranked (security) survives the collapse
+    assert [f["comment"] for f in kept] == ["security pass", "far away"]
 
 
 def test_rank_order_security_before_quality():
