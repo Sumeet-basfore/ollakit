@@ -1,0 +1,15 @@
+{
+  "service.py": [
+    {"line": 6, "class": "sql-injection"},
+    {"line": 10, "class": "hardcoded-credential"},
+    {"line": 14, "class": "resource-leak"}
+  ],
+  "math.py": [
+    {"line": 4, "class": "off-by-one"},
+    {"line": 15, "class": "none-dereference"}
+  ],
+  "handlers.py": [
+    {"line": 6, "class": "exception-swallowing"},
+    {"line": 13, "class": "shared-mutable-default"}
+  ]
+}
